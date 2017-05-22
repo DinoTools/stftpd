@@ -9,6 +9,11 @@ import threading
 PY2 = sys.version_info[0] == 2
 PY3 = sys.version_info[0] == 3
 
+if PY2:
+    from ConfigParser import ConfigParser
+else:
+    from configparser import ConfigParser
+
 logger = logging.getLogger("tftpd")
 
 ERROR_FILE_NOT_FOUND = 1
@@ -17,6 +22,11 @@ ERROR_FILE_WRITE = 3
 ERROR_FILE_EXISTS = 4
 ERROR_UNKNOWN_ID = 5
 ERROR_UNKNOWN = 6
+
+default_config = {
+    "port": 69,
+    "root_path": "./files"
+}
 
 
 class ClientConnection(object):
@@ -350,7 +360,22 @@ def main():
     logging.basicConfig(
         level=logging.WARNING
     )
-    s = Server(root_path="files/", port=69)
+
+    cfg = ConfigParser()
+    cfg.add_section("tftpd")
+    for k, v in default_config.items():
+        if not isinstance(v, str):
+            v = str(v)
+        cfg.set("tftpd", k, v)
+
+    # Read config
+    if len(sys.argv) > 1:
+        cfg.read(sys.argv[1])
+
+    s = Server(
+        port=cfg.getint("tftpd", "port"),
+        root_path=cfg.get("tftpd", "root_path"),
+    )
     s.run()
 
 if __name__ == "__main__":
