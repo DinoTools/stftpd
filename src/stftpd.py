@@ -2,9 +2,12 @@ import logging
 import os
 import socket
 import struct
+import sys
 import time
 import threading
 
+PY2 = sys.version_info[0] == 2
+PY3 = sys.version_info[0] == 3
 
 logger = logging.getLogger("tftpd")
 
