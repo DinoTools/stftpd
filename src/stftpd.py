@@ -1,5 +1,7 @@
+import datetime
 import logging
 import os
+import re
 import socket
 import struct
 import sys
@@ -55,12 +57,29 @@ class ClientConnection(object):
     def get_local_filename(self, filename, template="{filename}"):
         # Some clients send a leading /
         filename = filename.lstrip("/")
-        print(template)
-        tmp_filename = template.format(**{
+
+        values = {
             "filename": filename,
             "remote_ip": self.socket[0],
             "remote_port": self.socket[1]
-        })
+        }
+        # Replace datetime information
+        current_time = datetime.datetime.now()
+        regex_datetime = re.compile("{datetime:(?P<format>[^}]*)}")
+        m = regex_datetime.search(template)
+        # Stop after max. 10 replacements
+        i = 10
+        while m and i > 0:
+            template = template.replace(
+                m.group(),
+                current_time.strftime(m.group("format"))
+            )
+            m = regex_datetime.search(template)
+            i = i - 1
+
+        # Replace all other information
+        tmp_filename = template.format(**values)
+
         filename = os.path.join(self.server.root_path, tmp_filename)
         filename = os.path.realpath(filename)
         if not filename.startswith(self.server.root_path):
