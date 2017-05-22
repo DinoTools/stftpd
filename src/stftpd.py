@@ -24,6 +24,9 @@ ERROR_UNKNOWN_ID = 5
 ERROR_UNKNOWN = 6
 
 default_config = {
+    "filename": "{filename}",
+    "filename_get": None,
+    "filename_put": None,
     "port": 69,
     "root_path": "./files"
 }
@@ -49,10 +52,16 @@ class ClientConnection(object):
         self.server = server
         self.watchdog = Watchdog(self)
 
-    def get_local_filename(self, filename):
+    def get_local_filename(self, filename, template="{filename}"):
         # Some clients send a leading /
         filename = filename.lstrip("/")
-        filename = os.path.join(self.server.root_path, filename)
+        print(template)
+        tmp_filename = template.format(**{
+            "filename": filename,
+            "remote_ip": self.socket[0],
+            "remote_port": self.socket[1]
+        })
+        filename = os.path.join(self.server.root_path, tmp_filename)
         filename = os.path.realpath(filename)
         if not filename.startswith(self.server.root_path):
             raise Exception("File not in the root path")
@@ -295,7 +304,15 @@ class ClientConnection(object):
 
 
 class Server(object):
-    def __init__(self, host="", port=69, socket_family=socket.AF_INET, root_path=".", client_cls=ClientConnection):
+    def __init__(self, host="", port=69, filename="{filename}", filename_put=None, filename_get=None, socket_family=socket.AF_INET, root_path=".", client_cls=ClientConnection):
+        if filename_get:
+            self.filename_get = filename_get
+        else:
+            self.filename_get = filename
+        if filename_put:
+            self.filename_put = filename_put
+        else:
+            self.filename_put = filename
         self.root_path = root_path
         self.socket = socket.socket(socket_family, socket.SOCK_DGRAM)
         self.socket.bind((host, port))
@@ -373,6 +390,9 @@ def main():
         cfg.read(sys.argv[1])
 
     s = Server(
+        filename=cfg.get("tftpd", "filename"),
+        filename_get=cfg.get("tftpd", "filename_get"),
+        filename_put=cfg.get("tftpd", "filename_put"),
         port=cfg.getint("tftpd", "port"),
         root_path=cfg.get("tftpd", "root_path"),
     )
