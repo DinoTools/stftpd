@@ -29,8 +29,11 @@ default_config = {
     "filename": "{filename}",
     "filename_get": None,
     "filename_put": None,
+    "group": None,
     "port": 69,
-    "root_path": "./files"
+    "root_path": "./files",
+    "umask": "077",
+    "user": None
 }
 
 
@@ -338,6 +341,60 @@ class Server(object):
         self.remote_sockets = {}
         self.ClientConnection = client_cls
 
+    def drop_privileges(self, user="nobody", group="nobody", umask=0o77):
+        import pwd
+        import grp
+
+        current_uid = os.getuid()
+        current_gid = os.getgid()
+
+        logger.info(
+            "Started as %s(%d)/%s(%d)" % (
+                pwd.getpwuid(current_uid)[0],
+                current_uid,
+                grp.getgrgid(current_gid)[0],
+                current_gid
+            )
+        )
+        if current_uid != 0:
+            # Not root
+            return
+
+        # Get new uid and gid
+        new_uid = pwd.getpwnam(user)[2]
+        new_gid = grp.getgrnam(group)[2]
+
+        # Set new gid
+        try:
+            os.setgid(new_gid)
+        except OSError:
+            logger.error("Unable to set gid")
+
+        # Set new uid
+        try:
+            os.setuid(new_uid)
+        except OSError:
+            logger.error("Unable to set uid")
+
+        # Change umask
+        old_umask = os.umask(umask)
+        logger.info(
+            "Old umask: %03o, new umask: %03o" % (
+                old_umask,
+                umask
+            )
+        )
+        final_uid = os.getuid()
+        final_gid = os.getgid()
+        logger.info(
+            "Running as %s(%d)/%s(%d)" % (
+                pwd.getpwuid(final_uid)[0],
+                final_uid,
+                grp.getgrgid(final_gid)[0],
+                final_gid
+            )
+        )
+
     def run(self):
         while True:
             try:
@@ -415,6 +472,11 @@ def main():
         port=cfg.getint("tftpd", "port"),
         root_path=cfg.get("tftpd", "root_path"),
     )
+    user = cfg.get("tftpd", "user")
+    group = cfg.get("tftpd", "group")
+    umask = int(cfg.get("tftpd", "umask"), 8)
+    if user and group:
+        s.drop_privileges(user=user, group=group, umask=umask)
     s.run()
 
 if __name__ == "__main__":
