@@ -75,7 +75,7 @@ class ClientConnection(object):
             # Read request
             #          2 bytes    string     1 byte  string  1 byte
             #   RRQ   |  01    |  Filename  |   0  |  Mode  |  0
-            filename = self.get_local_filename(bytes.decode(data[2:].split(b'\x00')[0]))
+            filename = self.get_local_filename(bytes.decode(data[2:].split(b'\x00')[0]), self.server.filename_get)
             logger.debug(
                 "Read request from:%s:%s, filename:%s",
                 self.socket[0],
@@ -118,7 +118,7 @@ class ClientConnection(object):
             # Write request
             #          2 bytes    string    1 byte  string  1 byte
             #   WRQ   |  02   |  Filename  |   0  |  Mode  |   0
-            filename = self.get_local_filename(bytes.decode(data[2:].split(b'\x00')[0]))
+            filename = self.get_local_filename(bytes.decode(data[2:].split(b'\x00')[0]), self.server.filename_put)
             logger.debug(
                 "Write request from:%s:%s, filename:%s",
                 self.socket[0],
@@ -378,10 +378,10 @@ def main():
         level=logging.WARNING
     )
 
-    cfg = ConfigParser()
+    cfg = ConfigParser(allow_no_value=True)
     cfg.add_section("tftpd")
     for k, v in default_config.items():
-        if not isinstance(v, str):
+        if not isinstance(v, str) and v is not None:
             v = str(v)
         cfg.set("tftpd", k, v)
 
