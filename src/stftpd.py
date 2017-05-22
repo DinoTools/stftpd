@@ -335,7 +335,7 @@ class Server(object):
             self.filename_put = filename_put
         else:
             self.filename_put = filename
-        self.root_path = root_path
+        self.root_path = os.path.realpath(root_path)
         self.socket = socket.socket(socket_family, socket.SOCK_DGRAM)
         self.socket.bind((host, port))
         self.remote_sockets = {}
