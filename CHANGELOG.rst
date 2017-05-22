@@ -9,3 +9,5 @@ Changelog
 --------------------
 
 * Initial release
+
+.. _`master`: https://github.com/DinoTools/stftpd
